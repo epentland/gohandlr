@@ -13,20 +13,21 @@ import (
 )
 
 type ProcessDataInput struct {
-	Name  string
-	Email string
-	Age   int
+	Name  string `json:"name"`
+	Email string `json:"email"`
+	Age   int    `json:"age"`
 }
 
-func ProcessData(ctx context.Context, params ProcessDataParams, input ProcessDataInput) (handle.User, error) {
-	// Retrieve the user struct from the context
-	user, ok := ctx.Value(handle.User{}).(handle.User)
-	if !ok {
-		return handle.User{}, fmt.Errorf("user not found in context")
-	}
+func HandleProcessData(ctx context.Context, input ProcessDataInput, params ProcessDataParams) (handle.User, error) {
+	fmt.Println(params, input)
+	var user handle.User
+	user.Name = input.Name
+	user.Email = input.Email
+	user.Age = input.Age
+
+	user.Age += params.Id
 
 	// Do some processing
-	user.Age += params.Id
 	return user, nil
 }
 
@@ -41,11 +42,12 @@ func main() {
 		log.Fatal(err)
 	}
 	r := chi.NewRouter()
+
 	r.Use(middleware.Logger)
 
-	handle.Handle(r.Post, "/user/{id}", ProcessData, handle.NewHTMLTemplateWriter(tmpl, "test"))
+	handle.Handle(r.Post, "/user/{id}", HandleProcessData, handle.NewHTMLTemplateWriter(tmpl, "test"), handle.NewJsonWriter())
 
-	err = http.ListenAndServe(":8087", r)
+	err = http.ListenAndServe(":8078", r)
 	if err != nil {
 		panic(err)
 	}

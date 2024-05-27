@@ -10,49 +10,25 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type payload struct {
-	Body   any
-	Params any
-}
+type RequestDecoder[T any] func(*http.Request) (T, error)
 
-func decodeRequest[T, P any](r *http.Request) (T, P, error) {
-	var body T
-	var params P
-
-	// Decode the path and query parameters
-	params, err := decodeRequestParams[P](r)
-	if err != nil {
-		return body, params, err
-	}
-
-	// Decode the request body
-	body, err = decodeRequestBody[T](r)
-	if err != nil {
-		return body, params, err
-	}
-
-	return body, params, nil
-}
-
-func decodeRequestBody[T any](r *http.Request) (T, error) {
-	var data T
-
+func DecodeRequestBody[T any](r *http.Request, data *T) error {
 	// Check if there is supposed to be a body
 	if reflect.TypeOf(data) == nil {
-		return data, nil
+		return nil
 	}
 
 	// Read the request body
-	err := json.NewDecoder(r.Body).Decode(&data)
+	err := json.NewDecoder(r.Body).Decode(data)
 	if err != nil {
-		return data, fmt.Errorf("error decoding request body: %v", err)
+		return fmt.Errorf("error decoding request body: %v", err)
 	}
 
-	return data, nil
+	return nil
 }
 
-func decodeRequestParams[P any](r *http.Request) (P, error) {
-	var params P
+func DecodeRequestParams[T any](r *http.Request) (T, error) {
+	var params T
 
 	// Check if there is supposed to be params
 	if reflect.TypeOf(params) == nil {

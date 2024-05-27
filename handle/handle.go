@@ -2,10 +2,13 @@ package handle
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 )
 
 type HandlerFunc[T, S any] func(context.Context, T) (S, error)
+
+type ProcessFunc[T, P, S any] func(context.Context, T, P) (S, error)
 
 type HttpHandler func(string, http.HandlerFunc)
 
@@ -15,14 +18,25 @@ type User struct {
 	Age   int    `json:"age"`
 }
 
-func Handle[T, P, S any](handle HttpHandler, path string, process func(context.Context, T, P) (S, error), acceptWriters ...Writer) {
+func Handle[T, P, S any](handle HttpHandler, path string, process ProcessFunc[T, P, S], acceptWriters ...Writer) {
 	handle(path, func(w http.ResponseWriter, r *http.Request) {
+		var body T
+
 		// Decode the Request input
-		body, params, err := decodeRequest[T, P](r)
+		err := DecodeRequestBody(r, &body)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		fmt.Println(body)
+
+		// Decode the Request params
+		params, err := DecodeRequestParams[P](r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		fmt.Println(params)
 
 		// Process the data
 		resp, err := process(r.Context(), body, params)
@@ -38,19 +52,6 @@ func Handle[T, P, S any](handle HttpHandler, path string, process func(context.C
 			accept = "application/json"
 		}
 
-		// Add json if not present
-		hasJson := false
-		for _, writer := range acceptWriters {
-			if writer.Accept() == "application/json" {
-				hasJson = true
-				break
-			}
-		}
-
-		if !hasJson {
-			acceptWriters = append(acceptWriters, NewJsonWriter())
-		}
-
 		// Write the response
 		for _, writer := range acceptWriters {
 			if writer.Accept() == accept {
@@ -62,5 +63,8 @@ func Handle[T, P, S any](handle HttpHandler, path string, process func(context.C
 				return
 			}
 		}
+
+		// If no writer was found, return an error
+		http.Error(w, "No writer found for Accept header", http.StatusNotAcceptable)
 	})
 }

@@ -21,7 +21,6 @@ func NewJsonWriter() JSONWriter {
 type JSONWriter struct{}
 
 func (j JSONWriter) Write(w http.ResponseWriter, r *http.Request, data interface{}) error {
-	// Assume data is a map that can be converted to JSON
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return err
