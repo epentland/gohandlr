@@ -12,19 +12,21 @@ import (
 
 type RequestDecoder[T any] func(*http.Request) (T, error)
 
-func DecodeRequestBody[T any](r *http.Request, data *T) error {
+func DecodeRequestBody[T any](r *http.Request) (T, error) {
+	var data T
+
 	// Check if there is supposed to be a body
 	if reflect.TypeOf(data) == nil {
-		return nil
+		return data, nil
 	}
 
 	// Read the request body
-	err := json.NewDecoder(r.Body).Decode(data)
+	err := json.NewDecoder(r.Body).Decode(&data)
 	if err != nil {
-		return fmt.Errorf("error decoding request body: %v", err)
+		return data, fmt.Errorf("error decoding request body: %v", err)
 	}
 
-	return nil
+	return data, nil
 }
 
 func DecodeRequestParams[T any](r *http.Request) (T, error) {

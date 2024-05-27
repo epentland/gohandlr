@@ -2,13 +2,12 @@ package handle
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 )
 
 type HandlerFunc[T, S any] func(context.Context, T) (S, error)
 
-type ProcessFunc[T, P, S any] func(context.Context, T, P) (S, error)
+type ProcessFunc[B, P, R any] func(Context[B, P]) (R, error)
 
 type HttpHandler func(string, http.HandlerFunc)
 
@@ -18,17 +17,14 @@ type User struct {
 	Age   int    `json:"age"`
 }
 
-func Handle[T, P, S any](handle HttpHandler, path string, process ProcessFunc[T, P, S], acceptWriters ...Writer) {
-	handle(path, func(w http.ResponseWriter, r *http.Request) {
-		var body T
+type Context[Body, Params any] struct {
+	Context context.Context
+	Body    Body
+	Params  Params
+}
 
-		// Decode the Request input
-		err := DecodeRequestBody(r, &body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		fmt.Println(body)
+func Handle[B, P, S any](httpHandler HttpHandler, path string, process ProcessFunc[B, P, S], acceptWriters ...Writer) {
+	httpHandler(path, func(w http.ResponseWriter, r *http.Request) {
 
 		// Decode the Request params
 		params, err := DecodeRequestParams[P](r)
@@ -36,10 +32,23 @@ func Handle[T, P, S any](handle HttpHandler, path string, process ProcessFunc[T,
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Println(params)
+
+		// Decode the Request input
+		body, err := DecodeRequestBody[B](r)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		// Create the context
+		ctx := Context[B, P]{
+			Context: r.Context(),
+			Body:    body,
+			Params:  params,
+		}
 
 		// Process the data
-		resp, err := process(r.Context(), body, params)
+		resp, err := process(ctx)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -65,6 +74,6 @@ func Handle[T, P, S any](handle HttpHandler, path string, process ProcessFunc[T,
 		}
 
 		// If no writer was found, return an error
-		http.Error(w, "No writer found for Accept header", http.StatusNotAcceptable)
+		http.Error(w, "No writer found for Accept header: " + accept, http.StatusNotAcceptable)
 	})
 }

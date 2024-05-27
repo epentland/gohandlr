@@ -1,8 +1,6 @@
 package main
 
 import (
-	"context"
-	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -18,14 +16,11 @@ type ProcessDataInput struct {
 	Age   int    `json:"age"`
 }
 
-func HandleProcessData(ctx context.Context, input ProcessDataInput, params ProcessDataParams) (handle.User, error) {
-	fmt.Println(params, input)
+func HandleProcessData(ctx handle.Context[ProcessDataInput, ProcessDataParams]) (handle.User, error) {
 	var user handle.User
-	user.Name = input.Name
-	user.Email = input.Email
-	user.Age = input.Age
+	user.Name = ctx.Body.Name
 
-	user.Age += params.Id
+	user.Age += ctx.Params.Id
 
 	// Do some processing
 	return user, nil
@@ -45,7 +40,7 @@ func main() {
 
 	r.Use(middleware.Logger)
 
-	handle.Handle(r.Post, "/user/{id}", HandleProcessData, handle.NewHTMLTemplateWriter(tmpl, "test"), handle.NewJsonWriter())
+	handle.Handle(r.Post, "/user/{id}", HandleProcessData, handle.NewHTMLTemplateWriter(tmpl, "test"))
 
 	err = http.ListenAndServe(":8078", r)
 	if err != nil {
