@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type BodyReader interface {
@@ -70,7 +68,7 @@ func (d DefaultParamsReader) Reader(r *http.Request, buff any) error {
 		pathTag := field.Tag.Get("path")
 		if pathTag != "" {
 			// Get the path parameter value
-			pathValue := chi.URLParam(r, pathTag)
+			pathValue := r.PathValue(pathTag)
 
 			// Convert the path value to the field type
 			fieldValue := paramsValue.Field(i)
@@ -97,6 +95,26 @@ func (d DefaultParamsReader) Reader(r *http.Request, buff any) error {
 				fieldValue.SetInt(int64(intValue))
 			case reflect.String:
 				fieldValue.SetString(queryValue)
+			}
+		}
+
+		// Get the ctx tag value
+		ctxTag := field.Tag.Get("ctx")
+		if ctxTag != "" {
+			// Get the context value
+			ctxValue := r.Context().Value(ctxTag)
+
+			// Convert the context value to the field type
+			fieldValue := paramsValue.Field(i)
+			switch field.Type.Kind() {
+			case reflect.Int:
+				if intValue, ok := ctxValue.(int); ok {
+					fieldValue.SetInt(int64(intValue))
+				}
+			case reflect.String:
+				if strValue, ok := ctxValue.(string); ok {
+					fieldValue.SetString(strValue)
+				}
 			}
 		}
 	}
