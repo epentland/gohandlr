@@ -72,7 +72,7 @@ func newStruct[Body, Params, Response any](opts ...options.Options) (*HandleStru
 	return data, nil
 }
 
-func Handle[Body, Params, Response any](httpHandler HttpHandler, path string, response ResponseFunc[Body, Params, Response], opts ...options.Options) error {
+func Handle[Body, Params, Response any](httpHandler HttpHandler, path string, handler ResponseFunc[Body, Params, Response], opts ...options.Options) error {
 	h, err := newStruct[Body, Params, Response](opts...)
 	if err != nil {
 		panic(err)
@@ -115,9 +115,14 @@ func Handle[Body, Params, Response any](httpHandler HttpHandler, path string, re
 		}
 
 		// Does the data processes on the users function
-		resp, err := response(r.Context(), body, params)
+		resp, err := handler(r.Context(), body, params)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			switch e := err.(type) {
+			case Error:
+				http.Error(w, err.Error(), e.Status())
+			case error:
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+			}
 			return
 		}
 

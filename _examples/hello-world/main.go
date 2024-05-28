@@ -23,7 +23,7 @@ type ProcessDataParams struct {
 	Age int `query:"age"`
 }
 
-func Process(ctx context.Context, body ProcessDataInput, params ProcessDataParams) (User, error) {
+func HandleUserRequest(ctx context.Context, body ProcessDataInput, params ProcessDataParams) (User, error) {
 	// Do some processing
 	user := User{
 		Name: body.Name,
@@ -43,7 +43,7 @@ func main() {
 	// Create a new http.ServeMux
 	mux := http.NewServeMux()
 
-	handle.Handle(mux.HandleFunc, "POST /user/{id}", Process,
+	handle.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
 		options.DefaultOptions(),
 		options.WithJsonWriter(),
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
