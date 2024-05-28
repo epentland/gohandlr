@@ -1,51 +1,18 @@
-package handle
+package options
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
 )
 
-type BodyReader interface {
-	Reader(*http.Request, any) error
-	ContentType() string
-}
+var _ ParamsReader = DefaultParamsReader{}
 
-type ParamsReader interface {
-	Reader(*http.Request, any) error
-}
-
-func WithJSONBodyReader() JSONBodyReader {
-	return JSONBodyReader{}
-}
-
-type JSONBodyReader struct{}
-
-var _ BodyReader = JSONBodyReader{}
-
-func (j JSONBodyReader) Reader(r *http.Request, buff any) error {
-	// Read the request body
-	err := json.NewDecoder(r.Body).Decode(&buff)
-	if err != nil {
-		return fmt.Errorf("error decoding request body: %v", err)
-	}
-
-	return nil
-}
+type DefaultParamsReader struct{}
 
 func WithParamsReader() DefaultParamsReader {
 	return DefaultParamsReader{}
 }
-
-func (j JSONBodyReader) ContentType() string {
-	return "application/json"
-}
-
-var _ ParamsReader = DefaultParamsReader{}
-
-type DefaultParamsReader struct{}
 
 func (d DefaultParamsReader) Reader(r *http.Request, buff any) error {
 	// Get the type of the params struct
