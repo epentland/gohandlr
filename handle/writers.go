@@ -7,21 +7,21 @@ import (
 )
 
 type Writer interface {
-	Write(w http.ResponseWriter, r *http.Request, data any) error
+	Write(w http.ResponseWriter, r *http.Request, buff any) error
 	Accept() string
 }
 
 var _ Writer = JSONWriter{}
 var _ Writer = HTMLTemplateWriter{}
 
-func NewJsonWriter() JSONWriter {
+func WithJsonWriter() JSONWriter {
 	return JSONWriter{}
 }
 
 type JSONWriter struct{}
 
-func (j JSONWriter) Write(w http.ResponseWriter, r *http.Request, data interface{}) error {
-	jsonData, err := json.Marshal(data)
+func (j JSONWriter) Write(w http.ResponseWriter, r *http.Request, buff interface{}) error {
+	jsonData, err := json.Marshal(buff)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func (j JSONWriter) Accept() string {
 	return "application/json"
 }
 
-func NewHTMLTemplateWriter(templates *template.Template, name string) HTMLTemplateWriter {
+func WithHTMLTemplateWriter(templates *template.Template, name string) HTMLTemplateWriter {
 	return HTMLTemplateWriter{
 		Templates: templates,
 		Name:      name,

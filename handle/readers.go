@@ -10,35 +10,57 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-type RequestDecoder[T any] func(*http.Request) (T, error)
-
-func DecodeRequestBody[T any](r *http.Request) (T, error) {
-	var data T
-
-	// Check if there is supposed to be a body
-	if reflect.TypeOf(data) == nil {
-		return data, nil
-	}
-
-	// Read the request body
-	err := json.NewDecoder(r.Body).Decode(&data)
-	if err != nil {
-		return data, fmt.Errorf("error decoding request body: %v", err)
-	}
-
-	return data, nil
+type BodyReader interface {
+	Reader(*http.Request, any) error
+	ContentType() string
 }
 
-func DecodeRequestParams[T any](r *http.Request) (T, error) {
-	var params T
+type ParamsReader interface {
+	Reader(*http.Request, any) error
+}
 
-	// Check if there is supposed to be params
-	if reflect.TypeOf(params) == nil {
-		return params, nil
+func WithJSONBodyReader() JSONBodyReader {
+	return JSONBodyReader{}
+}
+
+type JSONBodyReader struct{}
+
+var _ BodyReader = JSONBodyReader{}
+
+func (j JSONBodyReader) Reader(r *http.Request, buff any) error {
+	// Read the request body
+	err := json.NewDecoder(r.Body).Decode(&buff)
+	if err != nil {
+		return fmt.Errorf("error decoding request body: %v", err)
 	}
 
+	return nil
+}
+
+func WithParamsReader() DefaultParamsReader {
+	return DefaultParamsReader{}
+}
+
+func (j JSONBodyReader) ContentType() string {
+	return "application/json"
+}
+
+var _ ParamsReader = DefaultParamsReader{}
+
+type DefaultParamsReader struct{}
+
+func (d DefaultParamsReader) Reader(r *http.Request, buff any) error {
 	// Get the type of the params struct
-	paramsType := reflect.TypeOf(params)
+	paramsType := reflect.TypeOf(buff)
+	if paramsType.Kind() == reflect.Ptr {
+		paramsType = paramsType.Elem()
+	}
+
+	// Get the value of the params struct
+	paramsValue := reflect.ValueOf(buff)
+	if paramsValue.Kind() == reflect.Ptr {
+		paramsValue = paramsValue.Elem()
+	}
 
 	// Iterate over the fields of the params struct
 	for i := 0; i < paramsType.NumField(); i++ {
@@ -51,14 +73,13 @@ func DecodeRequestParams[T any](r *http.Request) (T, error) {
 			pathValue := chi.URLParam(r, pathTag)
 
 			// Convert the path value to the field type
-			fieldValue := reflect.ValueOf(&params).Elem().Field(i)
+			fieldValue := paramsValue.Field(i)
 			switch field.Type.Kind() {
 			case reflect.Int:
 				intValue, _ := strconv.Atoi(pathValue)
 				fieldValue.SetInt(int64(intValue))
 			case reflect.String:
 				fieldValue.SetString(pathValue)
-				// Add more cases for other supported types
 			}
 		}
 
@@ -69,17 +90,16 @@ func DecodeRequestParams[T any](r *http.Request) (T, error) {
 			queryValue := r.URL.Query().Get(queryTag)
 
 			// Convert the query value to the field type
-			fieldValue := reflect.ValueOf(&params).Elem().Field(i)
+			fieldValue := paramsValue.Field(i)
 			switch field.Type.Kind() {
 			case reflect.Int:
 				intValue, _ := strconv.Atoi(queryValue)
 				fieldValue.SetInt(int64(intValue))
 			case reflect.String:
 				fieldValue.SetString(queryValue)
-				// Add more cases for other supported types
 			}
 		}
 	}
 
-	return params, nil
+	return nil
 }

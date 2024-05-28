@@ -5,15 +5,17 @@ import (
 	"testing"
 
 	"github.com/epentland/twirp/handle"
-	"github.com/stretchr/testify/assert"
+	"github.com/go-chi/chi/v5"
 )
 
 func TestFunc(t *testing.T) {
-	ctx := handle.Context[ProcessDataInput, ProcessDataParams]{
-		Context: context.Background(),
-		Body:    ProcessDataInput{},
-		Params:  ProcessDataParams{},
+	r := chi.NewRouter()
+	hand, err := handle.NewHandleStruct[handle.Nil, handle.Nil, handle.Nil]()
+	if err != nil {
+		panic(err)
 	}
 
-	assert.NotNil(t, ctx)
+	hand.Handle(r.Post, "/user/{id}", func(ctx context.Context, e1, e2 handle.Nil) (handle.Nil, error) {
+		return handle.Nil{}, nil
+	})
 }

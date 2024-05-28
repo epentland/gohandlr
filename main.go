@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -16,14 +18,16 @@ type ProcessDataInput struct {
 	Age   int    `json:"age"`
 }
 
-func HandleProcessData(ctx handle.Context[ProcessDataInput, ProcessDataParams]) (handle.User, error) {
+type ProcessData struct{}
+
+func Process(ctx context.Context, body ProcessDataInput, params ProcessDataParams) (handle.Nil, error) {
+	fmt.Println("Processing data")
 	var user handle.User
-	user.Name = ctx.Body.Name
+	user.Name = body.Name
+	user.Age = body.Age
 
-	user.Age += ctx.Params.Id
-
-	// Do some processing
-	return user, nil
+	user.Age += 100 + params.Id
+	return handle.Nil{}, nil
 }
 
 type ProcessDataParams struct {
@@ -36,13 +40,21 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println(tmpl)
+
 	r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+	r.Group(func(r chi.Router) {
+		r.Use(middleware.Logger)
+		r.Use(middleware.Recoverer)
+		r.Use(middleware.RequestID)
 
-	handle.Handle(r.Post, "/user/{id}", HandleProcessData, handle.NewHTMLTemplateWriter(tmpl, "test"))
+		handle.Handle(r.Post, "/user/{id}", Process,
+			handle.WithJsonWriter(),
+			handle.WithHTMLTemplateWriter(tmpl, "test"))
+	})
 
-	err = http.ListenAndServe(":8078", r)
+	err = http.ListenAndServe(":8077", r)
 	if err != nil {
 		panic(err)
 	}
