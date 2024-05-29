@@ -1,11 +1,11 @@
-package handle
+package gohandlr
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 
-	"github.com/epentland/twirp/options"
+	"github.com/epentland/gohandlr/options"
 )
 
 type Nil struct{}

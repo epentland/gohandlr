@@ -5,6 +5,6 @@ type Options interface{}
 func WithDefaults() []Options {
 	return []Options{
 		WithJSONBodyReader(),
-		WithDefaultParamsReader(),
+		WithParamsReader(),
 	}
 }

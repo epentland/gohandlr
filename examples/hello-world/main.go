@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"text/template"
 
-	handle "github.com/epentland/twirp"
-	options "github.com/epentland/twirp/options"
+	"github.com/epentland/gohandlr"
+	"github.com/epentland/gohandlr/options"
 )
 
 type User struct {
@@ -33,9 +33,9 @@ func HandleUserRequest(ctx context.Context, body ProcessDataInput, params Proces
 }
 
 // If the body, params or return struct are not needed, use the handle.Nil type.
-func HandleNoBody(ctx context.Context, body handle.Nil, params handle.Nil) (handle.Nil, error) {
+func HandleNoBody(ctx context.Context, body gohandlr.Nil, params gohandlr.Nil) (gohandlr.Nil, error) {
 	// Do write some data to the DB
-	return handle.Nil{}, nil
+	return gohandlr.Nil{}, nil
 }
 
 func main() {
@@ -49,7 +49,7 @@ func main() {
 	// Create a new http.ServeMux
 	mux := http.NewServeMux()
 
-	handle.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
+	gohandlr.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
 		options.WithDefaults(),
 		options.WithJsonWriter(),
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),

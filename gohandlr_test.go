@@ -1,4 +1,4 @@
-package handle
+package gohandlr
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/epentland/twirp/options"
+	"github.com/epentland/gohandlr/options"
 )
 
 type mockBodyReader struct {
