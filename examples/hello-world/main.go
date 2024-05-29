@@ -14,16 +14,16 @@ type User struct {
 	Age  int    `json:"age"`
 }
 
-type ProcessDataInput struct {
+type HandleUserBody struct {
 	Name string `json:"name"`
 }
 
-type ProcessDataParams struct {
+type HandleUserParams struct {
 	Id  int `path:"id"`
 	Age int `query:"age"`
 }
 
-func HandleUserRequest(ctx context.Context, body ProcessDataInput, params ProcessDataParams) (User, error) {
+func HandleUserRequest(ctx context.Context, body HandleUserBody, params HandleUserParams) (User, error) {
 	// Do some processing
 	user := User{
 		Name: body.Name,
