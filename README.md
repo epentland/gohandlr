@@ -101,8 +101,8 @@ If you don't need to use the request body, parameters, or return value, you can 
 - `options.WithDefaults()`: Applies default options suitable for most use cases.
 - `options.WithJsonWriter()`: Enables JSON response writing.
 - `options.WithHTMLTemplateWriter(tmpl, name)`: Enables HTML template rendering for responses.
-- `options.WithBodyReader()`: Specifies a custom request body reader.
-- `options.WithParamsReader()`: Specifies a custom request parameter reader.
+- `options.WithJSONBodyReader()`: Reads the json body.
+- `options.WithParamsReader()`: Reads the path, query, and context params using reflection.
 
 You can create your own options by implementing the appropriate interfaces:
 
