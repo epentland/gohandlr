@@ -57,28 +57,29 @@ func HandleUserRequest(ctx context.Context, body HandleUserBody, params HandleUs
 	return user, nil
 }
 
-// If the body, params or return struct are not needed, use the handle.Nil type.
 func HandleNoBody(ctx context.Context, body gohandlr.Nil, params gohandlr.Nil) (gohandlr.Nil, error) {
-	// Do write some data to the DB
+	// Do write some processing that doesn't require a return value
 	return gohandlr.Nil{}, nil
 }
 
 func main() {
-	// Create a text template
+	// Create a html template
 	tmplString := "<html><body>Hello, {{.Name}}, you are {{.Age}} years old!</body></html>"
 	tmpl, err := template.New("index.html").Parse(tmplString)
 	if err != nil {
 		panic(err)
 	}
 
-	// Create a new http.ServeMux
 	mux := http.NewServeMux()
 
+    // Works with any router
 	gohandlr.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
 		options.WithDefaults(),
 		options.WithJsonWriter(),
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
 	)
+
+    gohandlr.Handle(mux.HandleFunc, "PUT /user", HandleNoBody, options.WithDefaults())
 
 	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
