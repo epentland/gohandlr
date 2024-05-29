@@ -55,7 +55,7 @@ func main() {
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
 	)
 
-	err = http.ListenAndServe(":8083", mux)
+	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
 		panic(err)
 	}

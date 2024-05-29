@@ -23,37 +23,20 @@ func notNil[T any](t T) bool {
 	return !ok
 }
 
-func ValidateOptions[Body, Params, Response any](opts ...options.Options) error {
+func ValidateHandler[Body, Params, Response any](handler *Handler[Body, Params, Response]) error {
 	var body Body
 	var params Params
 	var response Response
 
-	var hasBodyReader bool
-	var hasParamsReader bool
-	var hasWriter bool
-
-	for _, opt := range opts {
-		switch opt.(type) {
-		case options.BodyReader:
-			hasBodyReader = true
-		case options.ParamsReader:
-			hasParamsReader = true
-		case options.Writer:
-			hasWriter = true
-		default:
-			return fmt.Errorf("unknown option")
-		}
-	}
-
-	if notNil(body) && !hasBodyReader {
+	if notNil(body) && len(handler.bodyReaders) == 0 {
 		return fmt.Errorf("no body reader provided, please provide one")
 	}
 
-	if notNil(params) && !hasParamsReader {
+	if notNil(params) && handler.paramsReader == nil {
 		return fmt.Errorf("no params reader provided, please provide one")
 	}
 
-	if notNil(response) && !hasWriter {
+	if notNil(response) && len(handler.writers) == 0 {
 		return fmt.Errorf("no writers provided, please provide one")
 	}
 
@@ -74,17 +57,17 @@ func SetOptions[Body, Params, Response any](data *Handler[Body, Params, Response
 }
 
 func NewHandler[Body, Params, Response any](opts ...options.Options) (*Handler[Body, Params, Response], error) {
-	err := ValidateOptions[Body, Params, Response](opts...)
-	if err != nil {
-		return nil, err
-	}
-
 	handler := &Handler[Body, Params, Response]{
 		writers:     make(map[string]options.Writer),
 		bodyReaders: make(map[string]options.BodyReader),
 	}
 
 	SetOptions(handler, opts...)
+
+	err := ValidateHandler(handler)
+	if err != nil {
+		return nil, err
+	}
 
 	return handler, nil
 }

@@ -151,7 +151,7 @@ func TestNewHandler(t *testing.T) {
 	}
 }
 
-func TestValidateOptions(t *testing.T) {
+func TestValidateHandler(t *testing.T) {
 	// Test cases
 	testCases := []struct {
 		name        string
@@ -193,20 +193,29 @@ func TestValidateOptions(t *testing.T) {
 			options:     []options.Options{&mockBodyReader{}, &mockParamsReader{}},
 			expectedErr: "no writers provided, please provide one",
 		},
-		{
-			name:        "Unknown option",
-			body:        "test",
-			params:      123,
-			response:    true,
-			options:     []options.Options{&mockBodyReader{}, &mockParamsReader{}, &mockWriter{}, struct{}{}},
-			expectedErr: "unknown option",
-		},
 	}
 
 	// Run test cases
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := ValidateOptions[string, int, bool](tc.options...)
+			handler := &Handler[string, int, bool]{
+				writers:     make(map[string]options.Writer),
+				bodyReaders: make(map[string]options.BodyReader),
+			}
+
+			// Set options on the handler
+			for _, opt := range tc.options {
+				switch v := opt.(type) {
+				case options.Writer:
+					handler.writers[v.Accept()] = v
+				case options.BodyReader:
+					handler.bodyReaders[v.ContentType()] = v
+				case options.ParamsReader:
+					handler.paramsReader = v
+				}
+			}
+
+			err := ValidateHandler(handler)
 
 			if tc.expectedErr == "" {
 				if err != nil {
