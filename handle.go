@@ -10,13 +10,9 @@ import (
 
 type Nil struct{}
 
-type HandlerFunc[T, S any] func(context.Context, T) (S, error)
-
-type HttpHandler func(string, func(http.ResponseWriter, *http.Request))
-
 type ResponseFunc[B, P, R any] func(context.Context, B, P) (R, error)
 
-type HandleStruct[Body, Params, Response any] struct {
+type Handler[Body, Params, Response any] struct {
 	writers      map[string]options.Writer
 	bodyReaders  map[string]options.BodyReader
 	paramsReader options.ParamsReader
@@ -27,129 +23,179 @@ func notNil[T any](t T) bool {
 	return !ok
 }
 
-func newStruct[Body, Params, Response any](opts ...options.Options) (*HandleStruct[Body, Params, Response], error) {
-	data := &HandleStruct[Body, Params, Response]{
-		writers:     make(map[string]options.Writer),
-		bodyReaders: make(map[string]options.BodyReader),
+func ValidateOptions[Body, Params, Response any](opts ...options.Options) error {
+	var body Body
+	var params Params
+	var response Response
+
+	var hasBodyReader bool
+	var hasParamsReader bool
+	var hasWriter bool
+
+	for _, opt := range opts {
+		switch opt.(type) {
+		case options.BodyReader:
+			hasBodyReader = true
+		case options.ParamsReader:
+			hasParamsReader = true
+		case options.Writer:
+			hasWriter = true
+		default:
+			return fmt.Errorf("unknown option")
+		}
 	}
 
-	for i := 0; i < len(opts); i++ {
-		switch v := opts[i].(type) {
-		case []options.Options:
-			opts = append(opts, v...)
+	if notNil(body) && !hasBodyReader {
+		return fmt.Errorf("no body reader provided, please provide one")
+	}
+
+	if notNil(params) && !hasParamsReader {
+		return fmt.Errorf("no params reader provided, please provide one")
+	}
+
+	if notNil(response) && !hasWriter {
+		return fmt.Errorf("no writers provided, please provide one")
+	}
+
+	return nil
+}
+
+func SetOptions[Body, Params, Response any](data *Handler[Body, Params, Response], opts ...options.Options) {
+	for _, opt := range opts {
+		switch v := opt.(type) {
 		case options.Writer:
 			data.writers[v.Accept()] = v
 		case options.BodyReader:
 			data.bodyReaders[v.ContentType()] = v
 		case options.ParamsReader:
 			data.paramsReader = v
-		default:
-			return nil, fmt.Errorf("unknown option type %T", v)
 		}
 	}
-
-	// Validation
-
-	// Make sure there is a body reader if a body was passed
-	var body Body
-	if notNil(body) && len(data.bodyReaders) == 0 {
-		return nil, fmt.Errorf("no body reader provided, please provide one")
-	}
-
-	// Make sure there is a params reader if a body was passed
-	var params Params
-	if notNil(params) && data.paramsReader == nil {
-		return nil, fmt.Errorf("no params reader provided, please provide one")
-	}
-
-	// Make sure there is a writer if a response was passed
-	var response Response
-	if notNil(response) && len(data.writers) == 0 {
-		return nil, fmt.Errorf("no writers provided, please provide one")
-
-	}
-
-	return data, nil
 }
 
-func Handle[Body, Params, Response any](httpHandler HttpHandler, path string, handler ResponseFunc[Body, Params, Response], opts ...options.Options) error {
-	h, err := newStruct[Body, Params, Response](opts...)
+func NewHandler[Body, Params, Response any](opts ...options.Options) (*Handler[Body, Params, Response], error) {
+	err := ValidateOptions[Body, Params, Response](opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	handler := &Handler[Body, Params, Response]{
+		writers:     make(map[string]options.Writer),
+		bodyReaders: make(map[string]options.BodyReader),
+	}
+
+	SetOptions(handler, opts...)
+
+	return handler, nil
+}
+
+func Handle[Body, Params, Response any](httpHandler func(string, func(http.ResponseWriter, *http.Request)), path string, handler ResponseFunc[Body, Params, Response], opts ...options.Options) error {
+	h, err := NewHandler[Body, Params, Response](opts...)
 	if err != nil {
 		panic(err)
 	}
 
 	httpHandler(path, func(w http.ResponseWriter, r *http.Request) {
-		contentType := r.Header.Get("Content-Type")
-		var body Body
-		var params Params
-		var err error
+		handleRequest(h, w, r, handler)
+	})
 
-		// Read the request body if there are body readers
-		if notNil(body) {
-			if contentType == "" {
-				contentType = "application/json"
-			}
+	return nil
+}
 
-			// Check to see if the content type is in the bodyreader map
-			bodyReader, ok := h.bodyReaders[contentType]
-			if !ok {
-				http.Error(w, fmt.Sprintf("unsupported content type %s", contentType), http.StatusBadRequest)
-				return
-			}
+func handleRequest[Body, Params, Response any](h *Handler[Body, Params, Response], w http.ResponseWriter, r *http.Request, handler ResponseFunc[Body, Params, Response]) {
+	contentType := r.Header.Get("Content-Type")
+	var body Body
+	var params Params
+	var err error
 
-			// Read the request body
-			err = bodyReader.Reader(r, &body)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// Read the request params if there are params readers
-		if notNil(params) {
-			err = h.paramsReader.Reader(r, &params)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-		}
-
-		// Does the data processes on the users function
-		resp, err := handler(r.Context(), body, params)
+	if notNil(body) {
+		body, err = readRequestBody(h, w, r, contentType)
 		if err != nil {
-			switch e := err.(type) {
-			case Error:
-				http.Error(w, err.Error(), e.Status())
-			case error:
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
 			return
 		}
+	}
 
-		// Check to see if there are any writers
-		if notNil(resp) {
-			// Get the Accept header
-			accept := r.Header.Get("Accept")
-			if accept == "" || accept == "*/*" {
-				accept = "application/json"
-			}
-
-			// Check to see if the accept type is in the writers map
-			writer, ok := h.writers[accept]
-			if !ok {
-				http.Error(w, fmt.Sprintf("unsupported accept type %s", accept), http.StatusBadRequest)
-				return
-			}
-
-			// Write the response
-			err = writer.Write(w, r, resp)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		} else {
-			w.WriteHeader(http.StatusNoContent)
+	if notNil(params) {
+		params, err = readRequestParams(h, w, r)
+		if err != nil {
+			return
 		}
-	})
-	return nil
+	}
+
+	resp, err := processRequest(w, r, handler, body, params)
+	if err != nil {
+		return
+	}
+
+	if notNil(resp) {
+		writeResponse(h, w, r, resp)
+	} else {
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func readRequestBody[Body, Params, Response any](h *Handler[Body, Params, Response], w http.ResponseWriter, r *http.Request, contentType string) (Body, error) {
+	if contentType == "" {
+		contentType = "application/json"
+	}
+
+	bodyReader, ok := h.bodyReaders[contentType]
+	if !ok {
+		http.Error(w, fmt.Sprintf("unsupported content type %s", contentType), http.StatusBadRequest)
+		return *new(Body), fmt.Errorf("unsupported content type")
+	}
+
+	var body Body
+	err := bodyReader.Reader(r, &body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return *new(Body), err
+	}
+
+	return body, nil
+}
+
+func readRequestParams[Body, Params, Response any](h *Handler[Body, Params, Response], w http.ResponseWriter, r *http.Request) (Params, error) {
+	var params Params
+	err := h.paramsReader.Reader(r, &params)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return *new(Params), err
+	}
+
+	return params, nil
+}
+
+func processRequest[Body, Params, Response any](w http.ResponseWriter, r *http.Request, handler ResponseFunc[Body, Params, Response], body Body, params Params) (Response, error) {
+	resp, err := handler(r.Context(), body, params)
+	if err != nil {
+		switch e := err.(type) {
+		case Error:
+			http.Error(w, err.Error(), e.Status())
+		case error:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		return *new(Response), err
+	}
+
+	return resp, nil
+}
+
+func writeResponse[Body, Params, Response any](h *Handler[Body, Params, Response], w http.ResponseWriter, r *http.Request, resp Response) {
+	accept := r.Header.Get("Accept")
+	if accept == "" || accept == "*/*" {
+		accept = "application/json"
+	}
+
+	writer, ok := h.writers[accept]
+	if !ok {
+		http.Error(w, fmt.Sprintf("unsupported accept type %s", accept), http.StatusBadRequest)
+		return
+	}
+
+	err := writer.Write(w, r, resp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }

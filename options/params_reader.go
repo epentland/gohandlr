@@ -10,7 +10,7 @@ var _ ParamsReader = DefaultParamsReader{}
 
 type DefaultParamsReader struct{}
 
-func WithParamsReader() DefaultParamsReader {
+func WithDefaultParamsReader() DefaultParamsReader {
 	return DefaultParamsReader{}
 }
 

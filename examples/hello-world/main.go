@@ -32,6 +32,12 @@ func HandleUserRequest(ctx context.Context, body ProcessDataInput, params Proces
 	return user, nil
 }
 
+// If the body, params or return struct are not needed, use the handle.Nil type.
+func HandleNoBody(ctx context.Context, body handle.Nil, params handle.Nil) (handle.Nil, error) {
+	// Do write some data to the DB
+	return handle.Nil{}, nil
+}
+
 func main() {
 	// Create a text template
 	tmplString := "<html><body>Hello, {{.Name}}, you are {{.Age}} years old!</body></html>"
@@ -44,12 +50,12 @@ func main() {
 	mux := http.NewServeMux()
 
 	handle.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
-		options.DefaultOptions(),
+		options.WithDefaults(),
 		options.WithJsonWriter(),
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
 	)
 
-	err = http.ListenAndServe(":8082", mux)
+	err = http.ListenAndServe(":8083", mux)
 	if err != nil {
 		panic(err)
 	}

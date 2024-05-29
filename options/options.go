@@ -2,9 +2,9 @@ package options
 
 type Options interface{}
 
-func DefaultOptions() []Options {
+func WithDefaults() []Options {
 	return []Options{
 		WithJSONBodyReader(),
-		WithParamsReader(),
+		WithDefaultParamsReader(),
 	}
 }
