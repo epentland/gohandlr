@@ -79,7 +79,7 @@ func main() {
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
 	)
 
-    gohandlr.Handle(mux.HandleFunc, "PUT /user", HandleNoBody, options.WithDefaults())
+    	gohandlr.Handle(mux.HandleFunc, "PUT /user", HandleNoBody, options.WithDefaults())
 
 	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
