@@ -11,11 +11,11 @@ import (
 	"strconv"
 )
 
-// HandleGetUsersId handles the GET request to /users/{id} with a request and response.
-func HandleGetUsersId(process func(ctx context.Context, req GetUsersIdInput) (User, error), options ...gohandlr.Option) (string, string, http.HandlerFunc) {
+// HandlePostUsersId handles the POST request to /users/{id} with a request and response.
+func HandlePostUsersId(process func(ctx context.Context, req PostUsersIdInput) (User, error), options ...gohandlr.Option) (string, string, http.HandlerFunc) {
 
 	paramReader := gohandlr.WithParamsReader(func(r *http.Request, v interface{}) error {
-		req, ok := v.(*GetUsersIdInput)
+		req, ok := v.(*PostUsersIdInput)
 		if !ok {
 			return fmt.Errorf("invalid type")
 		}
@@ -28,18 +28,9 @@ func HandleGetUsersId(process func(ctx context.Context, req GetUsersIdInput) (Us
 		}
 		req.Id = IdInt
 
-		Include := r.URL.Query().Get("include")
-
-		req.Include = Include
-
 		return nil
 	})
 	options = append([]gohandlr.Option{paramReader}, options...)
 
-	return "GET", "/users/{id}", gohandlr.HandlerWithRequestWithResponse(process, options...)
-}
-
-// HandlePostUsersId handles the POST request to /users/{id} with a request no response.
-func HandlePostUsersId(process func(ctx context.Context, req PostUsersIdInput) error, options ...gohandlr.Option) (string, string, http.HandlerFunc) {
-	return "POST", "/users/{id}", gohandlr.HandlerWithRequestNoResponse(process, options...)
+	return "POST", "/users/{id}", gohandlr.HandlerWithRequestWithResponse(process, options...)
 }
