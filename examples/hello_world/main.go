@@ -11,7 +11,7 @@ import (
 func main() {
 	r := chi.NewMux()
 	r.Use(middleware.Logger)
-	err := http.ListenAndServe(":8084", r)
+	err := http.ListenAndServe(":8080", r)
 	if err != nil {
 		fmt.Println(err)
 	}
