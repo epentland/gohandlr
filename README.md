@@ -63,7 +63,7 @@ func HandleNoBody(ctx context.Context, body gohandlr.Nil, params gohandlr.Nil) (
 }
 
 func main() {
-	// Create a html template
+	// Create a html template for rendering web pages
 	tmplString := "<html><body>Hello, {{.Name}}, you are {{.Age}} years old!</body></html>"
 	tmpl, err := template.New("index.html").Parse(tmplString)
 	if err != nil {
@@ -72,14 +72,14 @@ func main() {
 
 	mux := http.NewServeMux()
 
-    // Works with any router
+    	// Works with any router
 	gohandlr.Handle(mux.HandleFunc, "POST /user/{id}", HandleUserRequest,
 		options.WithDefaults(),
 		options.WithJsonWriter(),
 		options.WithHTMLTemplateWriter(tmpl, "index.html"),
 	)
 
-    gohandlr.Handle(mux.HandleFunc, "PUT /user", HandleNoBody, options.WithDefaults())
+    	gohandlr.Handle(mux.HandleFunc, "PUT /user", HandleNoBody, options.WithDefaults())
 
 	err = http.ListenAndServe(":8080", mux)
 	if err != nil {
@@ -109,6 +109,26 @@ You can create your own options by implementing the appropriate interfaces:
 - `BodyReader`: For parsing request bodies
 - `ParamsReader`: For parsing request parameters
 - `Writer`: For writing response data
+
+```go
+package options
+
+import "net/http"
+
+type BodyReader interface {
+	Reader(*http.Request, any) error
+	ContentType() string
+}
+
+type ParamsReader interface {
+	Reader(*http.Request, any) error
+}
+
+type Writer interface {
+	Write(http.ResponseWriter, *http.Request, any) error
+	Accept() string
+}
+```
 
 ## Contributing
 
