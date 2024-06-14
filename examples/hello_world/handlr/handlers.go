@@ -10,11 +10,11 @@ import (
 	"strconv"
 )
 
-// POST request to /users/{id}
-func HandlePostUsersId(options ...gohandlr.Option) (string, string, http.HandlerFunc) {
+// PUT request to /users/{id}
+func HandlePutUsersId(options ...gohandlr.Option) (string, string, http.HandlerFunc) {
 
 	paramReader := gohandlr.WithParamsReader(func(r *http.Request, v interface{}) error {
-		req, ok := v.(*PostUsersIdInput)
+		req, ok := v.(*PutUsersIdInput)
 		if !ok {
 			return fmt.Errorf("invalid type")
 		}
@@ -31,5 +31,5 @@ func HandlePostUsersId(options ...gohandlr.Option) (string, string, http.Handler
 	})
 	options = append([]gohandlr.Option{paramReader}, options...)
 
-	return "POST", "/users/{id}", gohandlr.HandlerWithRequestWithResponse(processPostUsersId, options...)
+	return "PUT", "/users/{id}", gohandlr.HandlerWithRequestWithResponse(processPutUsersId, options...)
 }

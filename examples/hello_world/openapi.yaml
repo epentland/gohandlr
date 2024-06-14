@@ -4,7 +4,7 @@ info:
   version: 0.1.9
 paths:
   /users/{id}:
-    post:
+    put:
       parameters:
         - name: id
           in: path

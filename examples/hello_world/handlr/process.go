@@ -2,10 +2,16 @@ package handlr
 
 import (
 	"context"
+	"github.com/go-chi/chi/v5"
 )
 
-// POST request to /users/{id}
-func processPostUsersId(ctx context.Context, req PostUsersIdInput) (User, error) {
+func RegisterHandlers(r *chi.Mux) {
+	r.MethodFunc(HandlePutUsersId())
+
+}
+
+// PUT request to /users/{id}
+func processPutUsersId(ctx context.Context, req PutUsersIdInput) (User, error) {
 	var resp User
 	return resp, nil
 }
