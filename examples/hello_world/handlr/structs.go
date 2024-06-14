@@ -6,12 +6,6 @@ type PostUsersIdInput struct {
 	Body Company
 }
 
-type Address struct {
-	City       string `json:"city"`
-	PostalCode string `json:"postalCode"`
-	Street     string `json:"street"`
-}
-
 type Company struct {
 	Employees []User `json:"employees"`
 	Name      string `json:"name"`
@@ -22,4 +16,10 @@ type User struct {
 	Email   string  `json:"email"`
 	Id      int     `json:"id"`
 	Name    string  `json:"name"`
+}
+
+type Address struct {
+	City       string `json:"city"`
+	PostalCode string `json:"postalCode"`
+	Street     string `json:"street"`
 }
