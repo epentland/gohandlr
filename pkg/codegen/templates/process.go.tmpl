@@ -1,0 +1,47 @@
+{{ define "process" }}
+    package handlr
+
+    import (
+        "context"
+        "github.com/go-chi/chi/v5"
+    )
+
+    func RegisterHandlers(r *chi.Mux) {
+    {{- range $Tag, $Endpoints := .Endpoints }}
+
+    {{- range $Endpoints }}
+        r.MethodFunc(Handle{{ .OperationID }}())
+    {{ end }}{{ end }}
+    }
+
+    {{- range $Tag, $Endpoints := .Endpoints }}
+
+    {{- range $Endpoints }}
+        {{ template "ProcessEndpoint" .}}
+    {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ define "ProcessEndpoint" }}
+    {{- if eq .State 0 }}
+        {{ template "ProcessNoRequestNoResponse" . }}
+    {{ end }}
+    {{- if eq .State 1 }}
+        {{ template "ProcessWithRequestNoResponse" . }}
+    {{- end }}
+    {{- if eq .State 2 }}
+        {{ template "ProcessNoRequestWithResponse" . }}
+
+    {{- end }}
+    {{- if eq .State 3 }}
+        {{ template "ProcessWithRequestWithResponse" . }}
+    {{- end }}
+{{ end }}
+
+{{ define "ProcessWithRequestWithResponse" }}
+{{ template "HandlerComment" . }}
+func process{{ .OperationID }}(ctx context.Context, req {{ .OperationID }}Input) ({{ .Response.Name }}, error) {
+    var resp {{ .Response.Name }}
+    return resp, nil
+}
+{{ end }}
